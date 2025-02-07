@@ -51,6 +51,7 @@ export default function Home() {
       setError('');
       await complete(input);
     } catch (error) {
+      console.error('Completion error:', error);
       setError('Failed to enhance text. Please try again.');
     }
   };
