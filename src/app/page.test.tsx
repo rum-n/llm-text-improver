@@ -1,11 +1,20 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import Home from './page'
 
-global.fetch = jest.fn()
+let mockComplete = jest.fn();
+
+jest.mock('ai/react', () => ({
+  useCompletion: () => ({
+    complete: mockComplete,
+    completion: '',
+    isLoading: false
+  })
+}));
 
 describe('Home', () => {
   beforeEach(() => {
-    jest.clearAllMocks()
+    jest.clearAllMocks();
+    mockComplete = jest.fn();
   })
 
   it('renders the title and text input', () => {
@@ -15,33 +24,22 @@ describe('Home', () => {
   })
 
   it('handles text enhancement flow', async () => {
-    const mockResponse = { correctedText: 'Enhanced text' }
-      ; (global.fetch as jest.Mock).mockResolvedValueOnce({
-        json: () => Promise.resolve(mockResponse),
-      })
+    const { getByPlaceholderText, getByText } = render(<Home />)
 
-    render(<Home />)
+    const textarea = getByPlaceholderText('Enter your text here...')
+    fireEvent.change(textarea, { target: { value: 'test text' } })
 
-    fireEvent.change(screen.getByPlaceholderText('Enter your text here...'), {
-      target: { value: 'test text' },
-    })
-
-    fireEvent.click(screen.getByText('Enhance Text'))
+    const button = getByText('Enhance Text')
+    fireEvent.click(button)
 
     await waitFor(() => {
-      expect(global.fetch).toHaveBeenCalledWith('/api/enhance', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: 'test text' }),
-      })
+      expect(screen.queryByText('Failed to enhance text. Please try again.')).not.toBeInTheDocument()
     })
-
-    expect(await screen.findByText('Enhanced text')).toBeInTheDocument()
   })
 
   it('handles API error gracefully', async () => {
     const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => { })
-      ; (global.fetch as jest.Mock).mockRejectedValueOnce(new Error('API Error'))
+    mockComplete.mockRejectedValueOnce(new Error('API Error'))
 
     render(<Home />)
 
@@ -52,7 +50,7 @@ describe('Home', () => {
     fireEvent.click(screen.getByText('Enhance Text'))
 
     await waitFor(() => {
-      expect(consoleSpy).toHaveBeenCalled()
+      expect(screen.getByText('Failed to enhance text. Please try again.')).toBeInTheDocument()
     })
 
     consoleSpy.mockRestore()

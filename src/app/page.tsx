@@ -3,6 +3,7 @@
 import styled from 'styled-components';
 import { useState } from 'react';
 import TextInput from '@/components/TextInput';
+import { useCompletion } from 'ai/react';
 
 const Main = styled.main`
   max-width: 800px;
@@ -24,25 +25,34 @@ const EnhancedTextWrapper = styled.div`
   border-radius: 8px;
 `;
 
+const ErrorText = styled.div`
+  color: red;
+  margin-top: 1rem;
+`;
+
+const LoadingText = styled.div`
+  margin-top: 1rem;
+`;
+
 export default function Home() {
   const [input, setInput] = useState('');
-  const [result, setResult] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  const { completion, complete, isLoading } = useCompletion({
+    api: '/api/enhance',
+    onError: (error) => {
+      console.error('Completion error:', error);
+      setError('Failed to enhance text. Please try again.');
+    }
+  });
 
   const handleCorrection = async () => {
-    setLoading(true);
     try {
-      const response = await fetch('/api/enhance', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: input }),
-      });
-      const data = await response.json();
-      setResult(data.correctedText);
+      setError('');
+      await complete(input);
     } catch (error) {
-      console.error('Error:', error);
-    } finally {
-      setLoading(false);
+      console.error('Error during correction:', error);
+      setError('Failed to enhance text. Please try again.');
     }
   };
 
@@ -54,10 +64,12 @@ export default function Home() {
         onChange={setInput}
         onSubmit={handleCorrection}
       />
-      {result && (
+      {error && <ErrorText>{error}</ErrorText>}
+      {isLoading && <LoadingText>Loading...</LoadingText>}
+      {completion && (
         <EnhancedTextWrapper>
           <h2>Wow! Your text looks so much better now!</h2>
-          <p>{result}</p>
+          <p>{completion}</p>
         </EnhancedTextWrapper>
       )}
     </Main>
