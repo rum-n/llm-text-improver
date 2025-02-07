@@ -18,7 +18,7 @@ jest.mock('ai', () => ({
 }));
 
 jest.mock('@ai-sdk/openai', () => ({
-  openai: jest.fn().mockReturnValue('gpt-4')
+  openai: jest.fn().mockReturnValue('gpt-3.5-turbo-instruct')
 }));
 
 describe('POST /api/enhance', () => {
@@ -43,7 +43,7 @@ describe('POST /api/enhance', () => {
 
     const response = await POST(request);
     expect(streamText).toHaveBeenCalledWith({
-      model: 'gpt-4',
+      model: 'gpt-3.5-turbo-instruct',
       system: expect.any(String),
       prompt: 'test text'
     });
